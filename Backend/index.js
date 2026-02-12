@@ -47,6 +47,7 @@ app.use("/api/job", jobRoute);
 app.use("/api/application", applicationRoute);
 app.use("/api/message", messageRoutes);
 app.use("/api/chat", chatRoutes);
+// dhfisfhsdhscha72e2hdiac
 
 server.listen(PORT, () => {
   connectDB();
