@@ -10,49 +10,76 @@ import {
 } from "../ui/table";
 
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Edit2, Eye, MoreHorizontal } from "lucide-react";
-import { useSelector } from "react-redux";
+import { Edit2, Eye, MoreHorizontal, Ban } from "lucide-react";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "sonner";
+import { setAllAdminJobs } from "@/redux/jobSlice";
 
 const AdminJobsTable = () => {
-  const { companies, searchCompanyByText } = useSelector(
-    (store) => store.company
-  );
-  const { allAdminJobs, searchJobByText } = useSelector((store) => store.job);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const [filterJobs, setFilterJobs] = useState(allAdminJobs);
+  const { companies } = useSelector((store) => store.company);
+  const { allAdminJobs, searchJobByText } = useSelector((store) => store.job);
 
+  const [filterJobs, setFilterJobs] = useState([]);
+
+  // 🔥 Filter Logic
   useEffect(() => {
-    const filteredJobs =
-      allAdminJobs.length >= 0 &&
-      allAdminJobs.filter((job) => {
-        if (!searchJobByText) {
-          return true;
-        }
-        return (
-          job.title?.toLowerCase().includes(searchJobByText.toLowerCase()) ||
-          job?.company?.name
-            .toLowerCase()
-            .includes(searchJobByText.toLowerCase())
-        );
-      });
-    setFilterJobs(filteredJobs);
+    if (!allAdminJobs) return;
+
+    const filtered = allAdminJobs.filter((job) => {
+      if (!searchJobByText) return true;
+
+      return (
+        job.title?.toLowerCase().includes(searchJobByText.toLowerCase()) ||
+        job?.company?.name
+          ?.toLowerCase()
+          .includes(searchJobByText.toLowerCase())
+      );
+    });
+
+    setFilterJobs(filtered);
   }, [allAdminJobs, searchJobByText]);
 
-  console.log("COMPANIES", companies);
-  if (!companies) {
-    return <div>Loading...</div>;
-  }
+  // 🔥 Toggle Job Status (Open ↔ Closed)
+  const handleToggleStatus = async (id) => {
+    try {
+      const res = await axios.put(
+        `http://localhost:5011/api/job/toggle/${id}`,
+        {},
+        { withCredentials: true },
+      );
+
+      if (res.data.success) {
+        toast.success(res.data.message);
+
+        // Update Redux without reload
+        const updatedJobs = allAdminJobs.map((job) =>
+          job._id === id ? res.data.job : job,
+        );
+
+        dispatch(setAllAdminJobs(updatedJobs));
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+    }
+  };
+
+  if (!companies) return <div>Loading...</div>;
 
   return (
     <div>
       <Table>
-        <TableCaption>Your recent Posted Jobs</TableCaption>
+        <TableCaption>Your Recent Posted Jobs</TableCaption>
+
         <TableHeader>
           <TableRow>
             <TableHead>Company Name</TableHead>
             <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
@@ -60,30 +87,65 @@ const AdminJobsTable = () => {
 
         <TableBody>
           {filterJobs.length === 0 ? (
-            <span>No Job Added</span>
+            <TableRow>
+              <TableCell colSpan={5} className="text-center">
+                No Job Added
+              </TableCell>
+            </TableRow>
           ) : (
-            filterJobs?.map((job) => (
-              <TableRow key={job.id}>
+            filterJobs.map((job) => (
+              <TableRow key={job._id}>
                 <TableCell>{job?.company?.name}</TableCell>
+
                 <TableCell>{job.title}</TableCell>
-                <TableCell>{job.createdAt.split("T")[0]}</TableCell>
-                <TableCell className="text-right cursor-pointer">
+
+                {/* ✅ Status Column */}
+                <TableCell>
+                  {job.status === "closed" ? (
+                    <span className="text-red-500 font-medium">Closed</span>
+                  ) : (
+                    <span className="text-green-600 font-medium">Open</span>
+                  )}
+                </TableCell>
+
+                <TableCell>
+                  {new Date(job.createdAt).toLocaleDateString()}
+                </TableCell>
+
+                <TableCell className="text-right">
                   <Popover>
                     <PopoverTrigger>
-                      <MoreHorizontal />
+                      <MoreHorizontal className="cursor-pointer" />
                     </PopoverTrigger>
-                    <PopoverContent className="w-32">
+
+                    <PopoverContent className="w-40">
                       <div
                         onClick={() => navigate(`/admin/companies/${job._id}`)}
-                        className="flex items-center gap-2 w-fit cursor-pointer mb-1"
+                        className="flex items-center gap-2 cursor-pointer mb-2"
                       >
                         <Edit2 className="w-4" />
                         <span>Edit</span>
                       </div>
-                      <hr />
-                      <div onClick={() => navigate(`/admin/jobs/${job._id}/applicants`)} className="flex items-center gap-2 w-fit cursor-pointer mt-1">
-                        <Eye className="w-4"></Eye>
+
+                      <div
+                        onClick={() =>
+                          navigate(`/admin/jobs/${job._id}/applicants`)
+                        }
+                        className="flex items-center gap-2 cursor-pointer mb-2"
+                      >
+                        <Eye className="w-4" />
                         <span>Applicants</span>
+                      </div>
+
+                      {/* ✅ Toggle Button */}
+                      <div
+                        onClick={() => handleToggleStatus(job._id)}
+                        className="flex items-center gap-2 cursor-pointer text-red-500"
+                      >
+                        <Ban className="w-4" />
+                        <span>
+                          {job.status === "closed" ? "Reopen Job" : "Close Job"}
+                        </span>
                       </div>
                     </PopoverContent>
                   </Popover>

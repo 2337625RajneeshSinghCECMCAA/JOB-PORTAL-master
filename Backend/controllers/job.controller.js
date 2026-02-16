@@ -58,25 +58,29 @@ export const postJob = async (req, res) => {
 export const getAllJobs = async (req, res) => {
   try {
     const keyword = req.query.keyword || "";
+
     const query = {
+      status: "open", // 🔥 only open jobs
       $or: [
         { title: { $regex: keyword, $options: "i" } },
         { description: { $regex: keyword, $options: "i" } },
       ],
     };
+
     const jobs = await Job.find(query)
-      .populate({
-        path: "company",
-      })
+      .populate("company")
       .sort({ createdAt: -1 });
 
-    if (!jobs) {
-      return res.status(404).json({ message: "No jobs found", status: false });
-    }
-    return res.status(200).json({ jobs, status: true });
+    return res.status(200).json({
+      jobs,
+      success: true,
+    });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Server Error", status: false });
+    return res.status(500).json({
+      message: "Server Error",
+      success: false,
+    });
   }
 };
 
@@ -113,5 +117,64 @@ export const getAdminJobs = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server Error", status: false });
+  }
+};
+export const closeJob = async (req, res) => {
+  try {
+    const jobId = req.params.id;
+
+    const job = await Job.findByIdAndUpdate(
+      jobId,
+      { status: "closed" },
+      { new: true },
+    );
+
+    if (!job) {
+      return res.status(404).json({
+        message: "Job not found",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Job closed successfully",
+      success: true,
+      job,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error",
+      success: false,
+    });
+  }
+};
+
+export const toggleJobStatus = async (req, res) => {
+  try {
+    const jobId = req.params.id;
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        message: "Job not found",
+        success: false,
+      });
+    }
+
+    job.status = job.status === "open" ? "closed" : "open";
+    await job.save();
+
+    return res.status(200).json({
+      message: `Job ${job.status} successfully`,
+      success: true,
+      job,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Server error",
+      success: false,
+    });
   }
 };

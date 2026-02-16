@@ -45,6 +45,11 @@ const jobSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["open", "closed"],
+      default: "open",
+    },
     applications: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -52,6 +57,6 @@ const jobSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 export const Job = mongoose.model("Job", jobSchema);
