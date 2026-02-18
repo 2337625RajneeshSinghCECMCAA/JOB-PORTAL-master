@@ -5,42 +5,63 @@ export const applyJob = async (req, res) => {
   try {
     const userId = req.id;
     const jobId = req.params.id;
+
     if (!jobId) {
-      return res
-        .status(400)
-        .json({ message: "Invalid job id", success: false });
+      return res.status(400).json({
+        message: "Invalid job id",
+        success: false,
+      });
     }
-    // check if the user already has applied for this job
+
+    // Check job exists
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        message: "Job not found",
+        success: false,
+      });
+    }
+
+    // 🔥 Check if job is closed
+    if (!job.isOpen) {
+      return res.status(400).json({
+        message: "This job is closed",
+        success: false,
+      });
+    }
+
+    // Check already applied
     const existingApplication = await Application.findOne({
       job: jobId,
       applicant: userId,
     });
+
     if (existingApplication) {
       return res.status(400).json({
         message: "You have already applied for this job",
         success: false,
       });
     }
-    //check if the job exists or not
-    const job = await Job.findById(jobId);
-    if (!job) {
-      return res.status(404).json({ message: "Job not found", success: false });
-    }
-    // create a new application
 
+    // Create application
     const newApplication = await Application.create({
       job: jobId,
       applicant: userId,
     });
+
     job.applications.push(newApplication._id);
     await job.save();
 
-    return res
-      .status(201)
-      .json({ message: "Application submitted", success: true });
+    return res.status(201).json({
+      message: "Application submitted",
+      success: true,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server error", success: false });
+    res.status(500).json({
+      message: "Server error",
+      success: false,
+    });
   }
 };
 

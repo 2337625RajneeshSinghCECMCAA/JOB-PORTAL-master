@@ -45,10 +45,9 @@ const jobSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    status: {
-      type: String,
-      enum: ["open", "closed"],
-      default: "open",
+    isOpen: {
+      type: Boolean,
+      default: true,
     },
     applications: [
       {

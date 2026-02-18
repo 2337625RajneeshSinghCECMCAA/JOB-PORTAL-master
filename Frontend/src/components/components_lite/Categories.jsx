@@ -32,10 +32,12 @@ const Category = [
 const Categories = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
   const searchjobHandler = (query) => {
     dispatch(setSearchedQuery(query));
     navigate("/browse");
   };
+
   return (
     <div>
       <div>
@@ -46,18 +48,21 @@ const Categories = () => {
           Explore our extensive job market.
         </p>
       </div>
-      <Carousel className="w-full   max-w-xl  mx-auto my-10">
+
+      <Carousel className="w-full max-w-xl mx-auto my-10">
         <CarouselContent>
-          {Category.map((category, index) => {
-            return (
-              <CarouselItem className="md:basis-1/2 lg-basis-1/3 ">
-                <Button onClick={() => searchjobHandler(category)}>
-                  {category}
-                </Button>
-              </CarouselItem>
-            );
-          })}
+          {Category.map((category, index) => (
+            <CarouselItem
+              key={category + index} // ✅ Add a unique key
+              className="md:basis-1/2 lg-basis-1/3"
+            >
+              <Button onClick={() => searchjobHandler(category)}>
+                {category}
+              </Button>
+            </CarouselItem>
+          ))}
         </CarouselContent>
+
         <CarouselPrevious />
         <CarouselNext />
       </Carousel>

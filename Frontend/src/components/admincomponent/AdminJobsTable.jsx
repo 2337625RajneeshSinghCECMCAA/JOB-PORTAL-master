@@ -10,27 +10,24 @@ import {
 } from "../ui/table";
 
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Edit2, Eye, MoreHorizontal, Ban } from "lucide-react";
+import { Edit2, Eye, MoreHorizontal } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { JOB_API_ENDPOINT } from "@/utils/data";
 import { toast } from "sonner";
 import { setAllAdminJobs } from "@/redux/jobSlice";
 
 const AdminJobsTable = () => {
+  const { allAdminJobs, searchJobByText } = useSelector((store) => store.job);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { companies } = useSelector((store) => store.company);
-  const { allAdminJobs, searchJobByText } = useSelector((store) => store.job);
-
   const [filterJobs, setFilterJobs] = useState([]);
 
-  // 🔥 Filter Logic
+  // 🔹 Filter jobs based on search text
   useEffect(() => {
-    if (!allAdminJobs) return;
-
-    const filtered = allAdminJobs.filter((job) => {
+    const filteredJobs = allAdminJobs.filter((job) => {
       if (!searchJobByText) return true;
 
       return (
@@ -41,14 +38,14 @@ const AdminJobsTable = () => {
       );
     });
 
-    setFilterJobs(filtered);
+    setFilterJobs(filteredJobs);
   }, [allAdminJobs, searchJobByText]);
 
-  // 🔥 Toggle Job Status (Open ↔ Closed)
-  const handleToggleStatus = async (id) => {
+  // 🔹 Toggle Job Status (Open/Closed)
+  const handleToggle = async (id) => {
     try {
-      const res = await axios.put(
-        `http://localhost:5011/api/job/toggle/${id}`,
+      const res = await axios.patch(
+        `${JOB_API_ENDPOINT}/status/${id}`,
         {},
         { withCredentials: true },
       );
@@ -56,19 +53,23 @@ const AdminJobsTable = () => {
       if (res.data.success) {
         toast.success(res.data.message);
 
-        // Update Redux without reload
-        const updatedJobs = allAdminJobs.map((job) =>
-          job._id === id ? res.data.job : job,
-        );
+        // Merge previous company object to avoid losing it
+        const updatedJobs = allAdminJobs.map((job) => {
+          if (job._id === id) {
+            return {
+              ...res.data.job,
+              company: job.company, // keep previous company object
+            };
+          }
+          return job;
+        });
 
         dispatch(setAllAdminJobs(updatedJobs));
       }
     } catch (error) {
-      toast.error("Something went wrong");
+      toast.error(error.response?.data?.message || "Something went wrong");
     }
   };
-
-  if (!companies) return <div>Loading...</div>;
 
   return (
     <div>
@@ -77,7 +78,7 @@ const AdminJobsTable = () => {
 
         <TableHeader>
           <TableRow>
-            <TableHead>Company Name</TableHead>
+            <TableHead>Company</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
@@ -89,29 +90,29 @@ const AdminJobsTable = () => {
           {filterJobs.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="text-center">
-                No Job Added
+                No Jobs Found
               </TableCell>
             </TableRow>
           ) : (
             filterJobs.map((job) => (
               <TableRow key={job._id}>
-                <TableCell>{job?.company?.name}</TableCell>
-
+                <TableCell>{job?.company?.name || "N/A"}</TableCell>
                 <TableCell>{job.title}</TableCell>
 
-                {/* ✅ Status Column */}
+                {/* Status */}
                 <TableCell>
-                  {job.status === "closed" ? (
-                    <span className="text-red-500 font-medium">Closed</span>
-                  ) : (
-                    <span className="text-green-600 font-medium">Open</span>
-                  )}
+                  <span
+                    className={`px-2 py-1 rounded text-white text-xs ${
+                      job.isOpen ? "bg-green-500" : "bg-red-500"
+                    }`}
+                  >
+                    {job.isOpen ? "Open" : "Closed"}
+                  </span>
                 </TableCell>
 
-                <TableCell>
-                  {new Date(job.createdAt).toLocaleDateString()}
-                </TableCell>
+                <TableCell>{job.createdAt.split("T")[0]}</TableCell>
 
+                {/* Actions */}
                 <TableCell className="text-right">
                   <Popover>
                     <PopoverTrigger>
@@ -137,15 +138,11 @@ const AdminJobsTable = () => {
                         <span>Applicants</span>
                       </div>
 
-                      {/* ✅ Toggle Button */}
                       <div
-                        onClick={() => handleToggleStatus(job._id)}
-                        className="flex items-center gap-2 cursor-pointer text-red-500"
+                        onClick={() => handleToggle(job._id)}
+                        className="cursor-pointer text-red-600"
                       >
-                        <Ban className="w-4" />
-                        <span>
-                          {job.status === "closed" ? "Reopen Job" : "Close Job"}
-                        </span>
+                        {job.isOpen ? "Close Job" : "Open Job"}
                       </div>
                     </PopoverContent>
                   </Popover>

@@ -15,29 +15,34 @@ const useGetAllJobs = () => {
       setLoading(true);
       setError(null);
       try {
+        // Add default keyword empty if searchedQuery is undefined
+        const keyword = searchedQuery ? searchedQuery : "";
         const res = await axios.get(
-          `${JOB_API_ENDPOINT}/get?keyword=${searchedQuery}`,
+          `${JOB_API_ENDPOINT}/get?keyword=${keyword}`,
           {
             withCredentials: true,
-          }
+          },
         );
+
         console.log("API Response:", res.data);
+
         if (res.data.status) {
-          // Updated success check
           dispatch(setAllJobs(res.data.jobs));
         } else {
           setError("Failed to fetch jobs.");
+          dispatch(setAllJobs([])); // optional: clear previous jobs
         }
-      } catch (error) {
-        console.error("Fetch Error:", error);
-        setError(error.message || "An error occurred.");
+      } catch (err) {
+        console.error("Fetch Error:", err);
+        setError(err.message || "An error occurred.");
+        dispatch(setAllJobs([])); // optional: clear previous jobs
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllJobs();
-  }, [dispatch]);
+  }, [dispatch, searchedQuery]); // ✅ Add searchedQuery to dependencies
 
   return { loading, error };
 };

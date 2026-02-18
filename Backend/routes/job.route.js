@@ -1,23 +1,21 @@
 import express from "express";
 
-import {authenticateToken} from "../middleware/isAuthenticated.js";
+import { authenticateToken } from "../middleware/isAuthenticated.js";
 import {
   getAdminJobs,
   getAllJobs,
   getJobById,
   postJob,
-  closeJob,
   toggleJobStatus,
-
 } from "../controllers/job.controller.js";
 
 const router = express.Router();
 
 router.route("/post").post(authenticateToken, postJob);
-router.route("/get").get(authenticateToken, getAllJobs);
+router.route("/get").get(getAllJobs);
 router.route("/getadminjobs").get(authenticateToken, getAdminJobs);
-router.route("/get/:id").get(authenticateToken, getJobById);
-router.route("/close/:id").put(authenticateToken, closeJob);
-router.route("/toggle/:id").put(authenticateToken, toggleJobStatus);
+router.route("/get/:id").get(getJobById);
+router.route("/status/:id").patch(authenticateToken, toggleJobStatus);
+
 
 export default router;
